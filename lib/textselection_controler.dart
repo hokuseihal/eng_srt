@@ -49,7 +49,7 @@ class MyMaterialTextSelectionControls extends MaterialTextSelectionControls {
       Offset selectionMidpoint,
       List<TextSelectionPoint> endpoints,
       TextSelectionDelegate delegate,
-      ClipboardStatusNotifier clipboardStatus,
+      ClipboardStatusNotifier? clipboardStatus,
       Offset? ofset) {
     final TextSelectionPoint startTextSelectionPoint = endpoints[0];
     final TextSelectionPoint endTextSelectionPoint =
@@ -68,7 +68,7 @@ class MyMaterialTextSelectionControls extends MaterialTextSelectionControls {
     return MyTextSelectionToolbar(
       anchorAbove: anchorAbove,
       anchorBelow: anchorBelow,
-      clipboardStatus: clipboardStatus,
+      clipboardStatus: clipboardStatus!,
       handleCopy: canCopy(delegate) && handleCopy != null
           ? () => handleCopy(delegate, clipboardStatus)
           : null,
