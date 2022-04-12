@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'dart:math';
+import 'dart:typed_data';
 
 import 'package:english_sub/textselection_controler.dart';
 import 'package:flutter/material.dart';
@@ -24,36 +26,56 @@ class InitScreen extends StatefulWidget {
 }
 
 class _InitScreenState extends State<InitScreen> {
+  late Uint8List audiobyte;
+  late List<String> srttxt;
+
   @override
   Widget build(BuildContext context) {
     return Center(
-      child: ElevatedButton(
-          child: Text('select'),
-          onPressed: () async {
-            FilePickerResult? result = await FilePicker.platform.pickFiles(allowMultiple: true);
-            if (result != null)
-              Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                      builder: (context) => Scaffold(
-                            body: MyApp(result: result),
-                            appBar: AppBar(),
-                          )));
-          }),
+      child: Row(
+        children: [
+          ElevatedButton(
+              onPressed: () async {
+                FilePickerResult? result =
+                    await FilePicker.platform.pickFiles();
+                audiobyte = result!.files.first.bytes!;
+              },
+              child: Text('audio')),
+          ElevatedButton(
+              onPressed: () async {
+                FilePickerResult? result =
+                    await FilePicker.platform.pickFiles();
+                srttxt = utf8.decode(result!.files.first.bytes!).split('\n');
+              },
+              child: Text('srt')),
+          ElevatedButton(
+              child: Text('select'),
+              onPressed: () async {
+                  Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => Scaffold(
+                                body: MyApp(audiobyte: audiobyte,srttxt: srttxt,),
+                                appBar: AppBar(),
+                              )));
+              }),
+        ],
+      ),
     );
   }
 }
 
 class MyApp extends StatefulWidget {
-  MyApp({Key? key, required this.result}) : super(key: key);
-  FilePickerResult result;
+  MyApp({Key? key, required this.audiobyte, required this.srttxt})
+      : super(key: key);
+  Uint8List audiobyte;
+  List<String> srttxt;
 
   @override
   _MyAppState createState() => _MyAppState();
 }
 
 class _MyAppState extends State<MyApp> {
-  late String path;
   late MyAudioHandler? _audioHandler;
   late ScrollController _scrollController;
   late SrtTime _srttime;
@@ -61,7 +83,7 @@ class _MyAppState extends State<MyApp> {
   Duration _position = Duration(seconds: 0);
   bool init = false;
   int gidx = 0;
-  int maxginx=0;
+  int maxginx = 0;
 
   //config
   double height = 80;
@@ -73,33 +95,28 @@ class _MyAppState extends State<MyApp> {
     super.initState();
     _scrollController = ScrollController();
     Future(() async {
-      for (String? path in widget.result.paths) {
-        if (path!.contains('.ogg')) {
-          _audioHandler = await AudioService.init(
-              builder: () => MyAudioHandler(path: path),
-              config: AudioServiceConfig(
-                  androidNotificationChannelId: 'com.nw.english_sub',
-                  androidNotificationChannelDescription: 'music playback',
-                  androidNotificationOngoing: true),cacheManager: null);
-          AudioService.position.listen((Duration position) {
-            setState(() {
-              _position = position;
-              //scroll
-              // print("${_srttime.timelist[gidx + 1].inMilliseconds},${_position.inMilliseconds}");
-              if (_srttime.timelist[gidx + 1].inMilliseconds < _position.inMilliseconds) {
-                gidx += 1;
-                maxginx=max(maxginx,gidx);
-                _scrollController.animateTo((gidx - t_padding) * height,
-                    duration: Duration(seconds: duration_sec), curve: Curves.ease);
-              }
-            });
-          });
-        } else if (path.contains('.srt')) {
-          _srttime = await readsrt(path.replaceAll('.ogg', '.srt'));
-        } else {
-          assert(false);
-        }
-      }
+      _audioHandler = await AudioService.init(
+          builder: () => MyAudioHandler(bytes: widget.audiobyte),
+          config: AudioServiceConfig(
+              androidNotificationChannelId: 'com.nw.english_sub',
+              androidNotificationChannelDescription: 'music playback',
+              androidNotificationOngoing: true),
+          cacheManager: null);
+      _srttime = await readsrt(widget.srttxt);
+      AudioService.position.listen((Duration position) {
+        setState(() {
+          _position = position;
+          //scroll
+          // print("${_srttime.timelist[gidx + 1].inMilliseconds},${_position.inMilliseconds}");
+          if (_srttime.timelist[gidx + 1].inMilliseconds <
+              _position.inMilliseconds) {
+            gidx += 1;
+            maxginx = max(maxginx, gidx);
+            _scrollController.animateTo((gidx - t_padding) * height,
+                duration: Duration(seconds: duration_sec), curve: Curves.ease);
+          }
+        });
+      });
       setState(() {
         init = true;
       });
@@ -111,7 +128,7 @@ class _MyAppState extends State<MyApp> {
     _audioHandler!.seek(position);
     if (idx != null) {
       gidx = idx;
-      maxginx=max(maxginx,gidx);
+      maxginx = max(maxginx, gidx);
       _scrollController.animateTo((idx - t_padding) * height,
           duration: Duration(seconds: 1), curve: Curves.ease);
     }
@@ -136,14 +153,16 @@ class _MyAppState extends State<MyApp> {
                     itemBuilder: (context, idx, animation) {
                       bool isshow = idx <= maxginx;
                       bool isjust = isshow &&
-                          (_srttime.timelist[idx + 1].inMilliseconds > _position.inMilliseconds) &&
-                          (_srttime.timelist[idx].inMilliseconds < _position.inMilliseconds);
+                          (_srttime.timelist[idx + 1].inMilliseconds >
+                              _position.inMilliseconds) &&
+                          (_srttime.timelist[idx].inMilliseconds <
+                              _position.inMilliseconds);
                       return SizedBox(
                         height: height,
                         child: Card(
                           child: GestureDetector(
                             onTap: () async {
-                              if (gidx -idx<=t_padding)
+                              if (gidx - idx <= t_padding)
                                 _audioHandler!.seek(_srttime.timelist[idx]);
                               else
                                 seek(_srttime.timelist[idx], idx: idx);
@@ -152,13 +171,16 @@ class _MyAppState extends State<MyApp> {
                               // print(_srttime.strlist[idx]);
                             },
                             child: ListTile(
-                              tileColor: isjust ? Colors.lightGreenAccent : null,
+                              tileColor:
+                                  isjust ? Colors.lightGreenAccent : null,
                               title: SelectableText(
                                 isshow ? _srttime.strlist[idx] : '',
                                 onSelectionChanged: (t, c) {
-                                  if (c == SelectionChangedCause.longPress) _audioHandler!.pause();
+                                  if (c == SelectionChangedCause.longPress)
+                                    _audioHandler!.pause();
                                 },
-                                selectionControls: MyMaterialTextSelectionControls(),
+                                selectionControls:
+                                    MyMaterialTextSelectionControls(),
                               ),
                               trailing: Icon(Icons.play_arrow),
                             ),
