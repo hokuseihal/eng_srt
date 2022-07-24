@@ -42,16 +42,33 @@ class _InitScreenState extends State<InitScreen> {
         children: [
           ElevatedButton(
               onPressed: () async {
-                FilePickerResult? result =
-                    await FilePicker.platform.pickFiles();
-                audiobyte = result!.files.first.bytes!;
+                try {
+                  FilePickerResult? result =
+                      await FilePicker.platform.pickFiles();
+                  audiobyte = result!.files.first.bytes!;
+                  showDialog(context: context, builder: (context)=>AlertDialog(content: Text(audiobyte.length.toString()),));
+                } catch (e) {
+                  showDialog(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                            content: Text(e.toString()),
+                          ));
+                }
               },
               child: Text('audio')),
           ElevatedButton(
               onPressed: () async {
-                FilePickerResult? result =
-                    await FilePicker.platform.pickFiles();
-                srttxt = utf8.decode(result!.files.first.bytes!).split('\n');
+                try {
+                  FilePickerResult? result =
+                      await FilePicker.platform.pickFiles();
+                  srttxt = utf8.decode(result!.files.first.bytes!).split('\n');
+                } catch (e) {
+                  showDialog(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                            content: Text(e.toString()),
+                          ));
+                }
               },
               child: Text('srt')),
           ElevatedButton(
