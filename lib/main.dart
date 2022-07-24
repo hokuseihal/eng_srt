@@ -8,14 +8,20 @@ import 'package:file_picker/file_picker.dart';
 import 'package:audio_service/audio_service.dart';
 import 'utils.dart';
 import 'audio_common.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(MaterialApp(
-      home: Scaffold(
-    body: InitScreen(),
-    appBar: AppBar(),
-  )));
+  await SentryFlutter.init((opt) {
+    opt.dsn =
+        'https://8564b9f502a3468da69c7048a814d877@o1332335.ingest.sentry.io/6596802';
+    opt.tracesSampleRate = 1.0;
+  },
+      appRunner: () => runApp(MaterialApp(
+              home: Scaffold(
+            body: InitScreen(),
+            appBar: AppBar(),
+          ))));
 }
 
 class InitScreen extends StatefulWidget {
@@ -41,7 +47,6 @@ class _InitScreenState extends State<InitScreen> {
                 audiobyte = result!.files.first.bytes!;
               },
               child: Text('audio')),
-
           ElevatedButton(
               onPressed: () async {
                 FilePickerResult? result =
@@ -52,13 +57,16 @@ class _InitScreenState extends State<InitScreen> {
           ElevatedButton(
               child: Text('select'),
               onPressed: () async {
-                  Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (context) => Scaffold(
-                                body: MyApp(audiobyte: audiobyte,srttxt: srttxt,),
-                                appBar: AppBar(),
-                              )));
+                Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (context) => Scaffold(
+                              body: MyApp(
+                                audiobyte: audiobyte,
+                                srttxt: srttxt,
+                              ),
+                              appBar: AppBar(),
+                            )));
               }),
         ],
       ),
