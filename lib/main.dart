@@ -46,7 +46,11 @@ class _InitScreenState extends State<InitScreen> {
                   FilePickerResult? result =
                       await FilePicker.platform.pickFiles();
                   audiobyte = result!.files.first.bytes!;
-                  showDialog(context: context, builder: (context)=>AlertDialog(content: Text(audiobyte.length.toString()),));
+                  showDialog(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                            content: Text(audiobyte.length.toString()),
+                          ));
                 } catch (e) {
                   showDialog(
                       context: context,
@@ -121,31 +125,40 @@ class _MyAppState extends State<MyApp> {
     super.initState();
     _scrollController = ScrollController();
     Future(() async {
-      _audioHandler = await AudioService.init(
-          builder: () => MyAudioHandler(bytes: widget.audiobyte),
-          config: AudioServiceConfig(
-              androidNotificationChannelId: 'com.nw.english_sub',
-              androidNotificationChannelDescription: 'music playback',
-              androidNotificationOngoing: true),
-          cacheManager: null);
-      _srttime = await readsrt(widget.srttxt);
-      AudioService.position.listen((Duration position) {
-        setState(() {
-          _position = position;
-          //scroll
-          // print("${_srttime.timelist[gidx + 1].inMilliseconds},${_position.inMilliseconds}");
-          if (_srttime.timelist[gidx + 1].inMilliseconds <
-              _position.inMilliseconds) {
-            gidx += 1;
-            maxginx = max(maxginx, gidx);
-            _scrollController.animateTo((gidx - t_padding) * height,
-                duration: Duration(seconds: duration_sec), curve: Curves.ease);
-          }
+      try {
+        _audioHandler = await AudioService.init(
+            builder: () => MyAudioHandler(bytes: widget.audiobyte),
+            config: AudioServiceConfig(
+                androidNotificationChannelId: 'com.nw.english_sub',
+                androidNotificationChannelDescription: 'music playback',
+                androidNotificationOngoing: true),
+            cacheManager: null);
+        _srttime = await readsrt(widget.srttxt);
+        AudioService.position.listen((Duration position) {
+          setState(() {
+            _position = position;
+            //scroll
+            // print("${_srttime.timelist[gidx + 1].inMilliseconds},${_position.inMilliseconds}");
+            if (_srttime.timelist[gidx + 1].inMilliseconds <
+                _position.inMilliseconds) {
+              gidx += 1;
+              maxginx = max(maxginx, gidx);
+              _scrollController.animateTo((gidx - t_padding) * height,
+                  duration: Duration(seconds: duration_sec),
+                  curve: Curves.ease);
+            }
+          });
         });
-      });
-      setState(() {
-        init = true;
-      });
+        setState(() {
+          init = true;
+        });
+      } catch (e) {
+        showDialog(
+            context: context,
+            builder: (context) => AlertDialog(
+                  content: Text(e.toString()),
+                ));
+      }
     });
   }
 
